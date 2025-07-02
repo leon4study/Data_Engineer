@@ -1,0 +1,87 @@
+body {
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+  background-color: #fefefe;
+  margin: 0;
+  padding: 2rem;
+  color: #333;
+  line-height: 1.6;
+}
+
+#question-box,
+#result-box {
+  max-width: 600px;
+  margin: auto;
+  padding: 2rem;
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  color: #444;
+}
+
+p {
+  font-size: 1.1rem;
+  margin: 1rem 0;
+}
+
+button.answer-btn {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  margin: 0.6rem 0;
+  font-size: 1rem;
+  background-color: #f2f2f2;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+button.answer-btn:hover {
+  background-color: #ffe9c6;
+  border-color: #f5a623;
+}
+
+#result-box {
+  text-align: center;
+}
+
+#result-box p {
+  font-size: 1.2rem;
+  margin-bottom: 1em;
+}
+
+#result-box strong {
+  color: #d2691e;
+  font-weight: bold;
+}
+
+.hidden {
+  display: none;
+}
+
+@media screen and (max-width: 768px) {
+  body {
+    padding: 1rem;
+  }
+
+  #question-box,
+  #result-box {
+    padding: 1rem;
+  }
+
+  p,
+  button.answer-btn {
+    font-size: 1rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+}
