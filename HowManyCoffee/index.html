@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>창업 시뮬레이션</title>
+    <style>
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="introBox">
+      <label>
+        초기 자본 입력: <input type="number" id="cash-input" value="0" />
+      </label>
+      <button id="start-btn">시작하기</button>
+      <button id="skip-btn">선택하지 않고 넘어가기</button>
+    </div>
+
+    <div id="question-box" class="hidden"></div>
+
+    <div id="result-box" class="hidden">
+      <!-- 결과 출력 영역 -->
+      <div id="result-content"></div>
+      <button id="retry-btn">다시하기</button>
+      <button id="goToLinkBtn">사이트로 이동</button>
+    </div>
+
+    <script type="module" src="app3.js"></script>
+  </body>
+</html>
