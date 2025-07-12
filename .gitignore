@@ -384,4 +384,5 @@ fabric.properties
 
 !/gradle/wrapper/gradle-wrapper.jar
 
-# End of https://www.toptal.com/developers/gitignore/api/python,java,androidstudio,macos,jupyternotebooks
+# End of https://www.toptal.com/developers/gitignore/api/python,java,androidstudio,macos,jupyternotebooks.idea/workspace.xml
+/jkTest
