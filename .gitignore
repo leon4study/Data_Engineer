@@ -15,6 +15,13 @@
 .mtj.tmp/
 
 
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+
+
 #
 *.csv
 *.mp4
