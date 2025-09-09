@@ -1,0 +1,3 @@
+hostPort: localhost:8081 #내 호스트의 8081로 설정
+rules:
+  - pattern: ".*"
