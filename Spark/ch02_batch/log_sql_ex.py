@@ -13,7 +13,6 @@ def load_data(ss: SparkSession, from_file, schema):
         ["73.218.61.17", "2023-02-26 04:16:22", "DELETE", "/lists", "201", 91],
         ["24.15.193.50", "2023-02-26 04:17:23", "PUT", "/auth", "400", 24],
     ]
-
     return ss.createDataFrame(log_data_inmemory, schema)
 
 

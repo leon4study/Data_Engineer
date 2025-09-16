@@ -1,7 +1,12 @@
 from pyspark import SparkContext, RDD
 from pyspark.sql import SparkSession
+import os, sys
 
 if __name__ == "__main__":
+    script_path = os.path.abspath(sys.argv[0])
+    script_dir = os.path.dirname(script_path)
+    os.chdir(script_dir)
+
     ss: SparkSession = SparkSession.builder \
         .master("local") \
         .appName("wordCount RDD ver") \
