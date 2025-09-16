@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "setup-spark-env",
+      "type": "shell",
+      "command": "${workspaceFolder}/Spark/setup_spark_env.sh",
+      "args": ["${file}"],
+      "problemMatcher": []
+    }
+  ]
+}
