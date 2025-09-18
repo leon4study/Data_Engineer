@@ -13,7 +13,9 @@
       "python": "/opt/homebrew/Caskroom/miniconda/base/envs/leo4study/bin/python",
       "env": {
         "JAVA_HOME": "/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home",
-        "PATH": "/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home/bin:${env:PATH}"
+        "PATH": "/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home/bin:${env:PATH}",
+        "PYSPARK_PYTHON": "/opt/homebrew/Caskroom/miniconda/base/envs/leo4study/bin/python",
+        "PYSPARK_DRIVER_PYTHON": "/opt/homebrew/Caskroom/miniconda/base/envs/leo4study/bin/python"
       }
     },
     {
