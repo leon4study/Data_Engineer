@@ -1,0 +1,37 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+group = 'de.example.hadoop.yarn'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+def hadoop_version = "3.2.1"
+
+dependencies {
+    implementation "org.apache.hadoop:hadoop-client:${hadoop_version}"
+    implementation("org.apache.hadoop:hadoop-common:${hadoop_version}") {
+        exclude group: 'commons-el', module: 'commons-el'
+        exclude group: 'tomcat', module: 'jasper-runtime'
+        exclude group: 'tomcat', module: 'jasper-implementation'  // <- 여기 확인 필요
+        exclude group: 'org.mortbay.jetty', module: 'jsp-2.1-jetty'
+    }
+    implementation "org.apache.hadoop:hadoop-hdfs:${hadoop_version}"
+    implementation "org.apache.hadoop:hadoop-yarn-api:${hadoop_version}"
+    implementation "org.apache.hadoop:hadoop-yarn-common:${hadoop_version}"
+    implementation "org.apache.hadoop:hadoop-yarn-client:${hadoop_version}"
+    implementation "org.apache.hadoop:hadoop-yarn-server-nodemanager:${hadoop_version}"
+    implementation "org.apache.hadoop:hadoop-yarn-server-resourcemanager:${hadoop_version}"
+    implementation "commons-lang:commons-lang:2.6"
+    implementation "com.google.guava:guava:11.0.2"
+    implementation "commons-cli:commons-cli:1.2"
+    implementation "commons-io:commons-io:2.4"   // <- 오타 수정
+}
+
+test {
+    useJUnitPlatform()
+}
