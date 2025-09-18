@@ -64,6 +64,8 @@ public class MyApplicationMaster {
 
     public MyApplicationMaster() {
         // Set up the configuration
+        // YARN 관련 환경 변수, 디폴트 설정, 클러스터 정보 등을 읽을 수 있음
+        // AM 내부에서 FileSystem, 리소스 요청, 컨테이너 환경 설정 등에 사용
         conf = new YarnConfiguration();
     }
 
@@ -90,9 +92,17 @@ public class MyApplicationMaster {
         opts.addOption("priority", true, "Application Priority. Default 0");
         opts.addOption("help", false, "Print usage");
 
+        // 커맨드라인 파싱
+        // 파라미터 문자열을 분석 → cliParser.getOptionValue()로 접근 가능
         CommandLine cliParser = new GnuParser().parse(opts, args);
 
+        // 환경변수 읽어오기
         Map<String, String> envs = System.getenv();
+
+        // YARN 컨테이너가 실행될 때 NodeManager가 전달한 환경 변수 확인
+        // AM 실행 시 CONTAINER_ID 확인 + ApplicationAttemptId 생성하고
+        // 없으면 테스트용 app_attempt_id 사용
+        // AM이 어느 시도(attempt)인지 식별 → 이후 컨테이너 요청, 리포트 제출에 필요
 
         if (!envs.containsKey(ApplicationConstants.Environment.CONTAINER_ID.name())) {
             if (cliParser.hasOption("app_attempt_id")) {
@@ -125,6 +135,9 @@ public class MyApplicationMaster {
                     ApplicationConstants.Environment.NM_PORT.name() + " not set in the environment");
         }
 
+        // AM JAR 파일 정보 확인
+        // MyClient.java - getAMEnvironment()에서 전달한 환경 변수 참조
+        // JAR 파일 경로, 길이, 타임스탬프를 읽어 컨테이너에서 AM JAR 실행 준비
         if (envs.containsKey(Constants.AM_JAR_PATH)) {
             appJarPath = envs.get(Constants.AM_JAR_PATH);
 
@@ -143,11 +156,14 @@ public class MyApplicationMaster {
             }
         }
 
+        // 초기 정보 출력
+        // 디버깅 및 로그용, 현재 실행 중인 AM의 ID/시도 정보 출력
         System.out.println("Application master for app" + ", appId="
                 + appAttemptID.getApplicationId().getId() + ", clusterTimestamp="
                 + appAttemptID.getApplicationId().getClusterTimestamp()
                 + ", attemptId=" + appAttemptID.getAttemptId());
 
+        // 커맨드라인 옵션 적용
         containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "10"));
         containerVirtualCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
         numTotalContainers = Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
@@ -158,6 +174,7 @@ public class MyApplicationMaster {
 
         return true;
     }
+
 
     /**
      * Main run function for the application master
@@ -170,38 +187,51 @@ public class MyApplicationMaster {
         System.out.println("Running MyApplicationMaster");
 
         // Initialize clients to ResourceManager and NodeManagers
+        // AMRMClient → AM이 ResourceManager(RM)와 통신할 수 있게 해주는 클라이언트
         AMRMClient<ContainerRequest> amRMClient = AMRMClient.createAMRMClient();
         amRMClient.init(conf);
+        // 초기화 후 start() 호출 → RM과 연결 준비 완료
         amRMClient.start();
 
         // Register with ResourceManager
+        // AM 자신을 RM에 등록
+        // 인자로 전달되는 값: 호스트, RPC 포트, 추적 URL - 지금 예제에서는 모두 빈 문자열/0으로 설정 → 기본 등록
         amRMClient.registerApplicationMaster("", 0, "");
 
         // Set up resource type requirements for Container
+        // 각 컨테이너에서 요구되는 메모리, CPU 코어 설정
         Resource capability = Records.newRecord(Resource.class);
         capability.setMemorySize(containerMemory);
         capability.setVirtualCores(containerVirtualCores);
 
         // Priority for worker containers - priorities are intra-application
+        // 동일 애플리케이션 내 컨테이너 우선순위 지정
         Priority priority = Records.newRecord(Priority.class);
         priority.setPriority(requestPriority);
 
         // Make container requests to ResourceManager
+        // RM에게 컨테이너 요청을 등록 - 요청된 수만큼 반복하여 numTotalContainers 생성
         for (int i = 0; i < numTotalContainers; ++i) {
             ContainerRequest containerAsk = new ContainerRequest(capability, null, null, priority);
             amRMClient.addContainerRequest(containerAsk);
         }
 
+        // 컨테이너를 실제 노드에서 실행시키는 NodeManager와 통신
+        // AM → NM : 컨테이너 런칭 명령 전송
         NMClient nmClient = NMClient.createNMClient();
         nmClient.init(conf);
         nmClient.start();
 
         // Setup CLASSPATH for Container
+        // 각 컨테이너 실행 환경 변수 설정  - CLASSPATH 지정 → 애플리케이션 클래스, 의존 라이브러리 포함
         Map<String, String> containerEnv = new HashMap<String, String>();
         containerEnv.put("CLASSPATH", "./*");
 
         // Setup ApplicationMaster jar file for Container
+        // AM JAR 파일을 LocalResource로 등록 → 컨테이너에서 실행 가능하게 함
         LocalResource appMasterJar = createAppMasterJar();
+
+
 
         // Obtain allocated containers and launch
         int allocatedContainers = 0;
@@ -210,18 +240,24 @@ public class MyApplicationMaster {
         // containers and if we miss those notifications, we'll never see them again
         // and this ApplicationMaster will hang indefinitely.
         int completedContainers = 0;
+
+
         // 컨테이너를 다 할당 받을 때까지 반복을 함
         while (allocatedContainers < numTotalContainers) {
             AllocateResponse response = amRMClient.allocate(0);
+            // RM으로부터 컨테이너 할당을 반복적으로 요청
             for (Container container : response.getAllocatedContainers()) {
                 allocatedContainers++;
 
+                // createContainerLaunchContext() → 컨테이너 실행 환경과 명령 설정
                 ContainerLaunchContext appContainer = createContainerLaunchContext(appMasterJar, containerEnv);
                 System.out.println("Launching container " + container.getId().toString());
                 System.out.println("Allocated containers " + allocatedContainers);
 
+                // 실제 컨테이너 실행
                 nmClient.startContainer(container, appContainer);
             }
+            // 완료된 컨테이너 상태 체크
             for (ContainerStatus status : response.getCompletedContainersStatuses()) {
                 ++completedContainers;
                 System.out.println("ContainerID:" + status.getContainerId() + ", state:" + status.getState().name());
@@ -232,6 +268,8 @@ public class MyApplicationMaster {
 
         // 다 끝날 때까지 반복.
         // Now wait for the remaining containers to complete
+        // 할당 완료 후, 남은 컨테이너 종료까지 대기.
+        // AM이 모든 작업 완료 후 종료될 수 있도록 함
         while (completedContainers < numTotalContainers) {
             AllocateResponse response = amRMClient.allocate(completedContainers / numTotalContainers);
             for (ContainerStatus status : response.getCompletedContainersStatuses()) {
@@ -244,24 +282,38 @@ public class MyApplicationMaster {
         System.out.println("Completed containers:" + completedContainers);
 
         // Un-register with ResourceManager
+        // 모든 컨테이너 작업이 끝나면 AM이 RM에 작업 종료 상태 전달
         amRMClient.unregisterApplicationMaster(
                 FinalApplicationStatus.SUCCEEDED, "", "");
         System.out.println("Finished MyApplicationMaster");
     }
 
     private LocalResource createAppMasterJar() throws IOException {
+        // YARN에서는 컨테이너에서 접근할 수 있는 파일/리소스를 LocalResource 객체로 표현
+        // AM을 실행할 JAR 파일을 LocalResource로 지정
         LocalResource appMasterJar = Records.newRecord(LocalResource.class);
+
+        // 비어있으면 빈 LocalResource 객체 반환
         if (!appJarPath.isEmpty()) {
-            appMasterJar.setType(LocalResourceType.FILE);
+            appMasterJar.setType(LocalResourceType.FILE); // FILE → 단일 파일 (JAR)
             Path jarPath = new Path(appJarPath);
+            // JAR 파일 경로를 HDFS 또는 로컬 FS 기준으로 절대 경로화
             jarPath = FileSystem.get(conf).makeQualified(jarPath);
-            appMasterJar.setResource(URL.fromPath(jarPath));
+            appMasterJar.setResource(URL.fromPath(jarPath)); // setResource() → 컨테이너가 접근할 URL 지정
+
+            //YARN이 파일의 변경 여부 확인과 데이터 무결성 검증에 사용하는 정보- 파일 수정 시간(timestamp)과 크기(size) 지정
             appMasterJar.setTimestamp(appJarTimestamp);
             appMasterJar.setSize(appJarPathLen);
+
+            // 컨테이너 간 리소스 공유 범위 설정 - PUBLIC → 클러스터 모든 노드에서 접근 가능
             appMasterJar.setVisibility(LocalResourceVisibility.PUBLIC);
         }
+        // 이 LocalResource 객체를 컨테이너 런치 컨텍스트(ContainerLaunchContext)에 등록하면,
+        // AM 컨테이너가 실행될 때 해당 JAR 파일을 사용할 수 있음
         return appMasterJar;
     }
+
+
 
     /**
      * Launch container by create ContainerLaunchContext
@@ -272,12 +324,17 @@ public class MyApplicationMaster {
      */
 
     private ContainerLaunchContext createContainerLaunchContext(LocalResource appMasterJar,
-                                                                Map<String, String> containerEnv) {
-        ContainerLaunchContext appContainer =
-                Records.newRecord(ContainerLaunchContext.class);
-        appContainer.setLocalResources(
-                Collections.singletonMap(Constants.AM_JAR_NAME, appMasterJar));
+                                                                Map<String, String> containerEnv){
+
+        // YARN 컨테이너 런치 컨텍스트 객체 생성
+        ContainerLaunchContext appContainer = Records.newRecord(ContainerLaunchContext.class);
+
+        // 컨테이너 안에서 접근할 LocalResource 등록
+        appContainer.setLocalResources(Collections.singletonMap(Constants.AM_JAR_NAME, appMasterJar));
+
+        // 컨테이너 실행 환경 변수 설정 (CLASSPATH, 필요 시 JAVA_HOME 등)
         appContainer.setEnvironment(containerEnv);
+
         // 컨테이너 안에서 실행될 어플리케이션도 하나의 어플리케이션이니까 자바 어플리케이션을 실행할 옵션을 커멘드에다가 세팅
         // 최대 메모리 128M, HelloYarn 클래스가 메인이다
         appContainer.setCommands(
