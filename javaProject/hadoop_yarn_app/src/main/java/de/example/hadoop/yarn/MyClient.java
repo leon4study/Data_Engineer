@@ -99,6 +99,10 @@ public class MyClient {
     private void createYarnClient() {
         // 맨 처음 yarn 클라이언트가 yarn에 있는 리소스 매니저한테 뭔가 요청을 하는데 그 전에 클라이언트가 있어야겠지?
         // 그 클라이언트를 말한다. 잡을 요청하는 쪽에서 동작하는 친구
+        /*
+        Application 실행 요청 1 - YarnClient 생성 및 초기화
+        Yarn 클라이언트 생성 → ResourceManager(RM)와 통신할 준비
+         */
         yarnClient = YarnClient.createYarnClient();
         this.conf = new YarnConfiguration();
         yarnClient.init(conf);
@@ -211,11 +215,23 @@ public class MyClient {
         System.out.println("Running Client");
         yarnClient.start();
 
+
+        /*
+        Application 실행 요청 2 - 새로운 Application 요청
+        - yarnClient.createApplication() 호출 → RM에게 신규 Application ID 발급 요청
+        - GetNewApplicationResponse → 클러스터가 지원 가능한 최대 리소스 정보 포함
+        - 클라이언트는 ClientRMService 의 createNewApplication() 을 호출해서 Application ID 발급을 요청한다.
+            ClientRMService는 클라이언트의 요청에 새로운 Application ID와 Yarn 클러스터에서 최대로 할당할 수 있는 리소스 정보가 설정되어있는
+            GetNewApplicationResponse 객체를 전달한다.
+         */
+
         // Get a new application id
         YarnClientApplication app = yarnClient.createApplication();
+
         GetNewApplicationResponse appResponse = app.getNewApplicationResponse();
         // 여기서 id 가져옴
         // GetNewApplicationResponse → 클러스터가 지원할 수 있는 최대 리소스 정보 포함
+        // app.getNewApplicationResponse() → 최대 리소스 정보 확인
 
         long maxMem = appResponse.getMaximumResourceCapability().getMemorySize();
         // yarn이 너한테 할당해 줄 수 있는 최대 메모리 사이즈 얼만큼이야 알려줌
@@ -240,6 +256,12 @@ public class MyClient {
             amVCores = maxVCores;
         }
 
+
+        /*
+        Application 실행 요청 3 - ApplicationSubmissionContext 설정
+        - ApplicationSubmissionContext → RM에 제출할 Application 정보 포함
+            - Application ID, 이름, 우선순위, 큐, 필요한 리소스, AM 컨테이너 정보 등
+         */
         // set the application name
         // Yarn을 제출할 때 사용할 context 객체 하나 만들고
         ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
@@ -282,8 +304,21 @@ public class MyClient {
         // SubmitApplicationResponse submitResp = applicationsManager.submitApplication(appRequest);
         // Ignore the response as either a valid response object is returned on success
         // or an exception thrown to denote some form of a failure
+
+        /*
+        Application 실행 요청 4 -  Application 제출
+        - yarnClient.submitApplication(appContext) : 실제 RM에 Application 제출 → AM 실행 요청
+
+        Application Master 실행 요청 단계 1 - 어플리케이션 등록 및 AM 컨테이너 요청
+        - RMAppManager가 내부 스케줄러에게 AM 실행 컨테이너 요청
+        - 클라이언트 코드 : yarnClient.submitApplication(appContext)
+        - RM 내부: RMAppManager.handle()
+         */
+
         System.out.println("Submitting application to ASM");
         yarnClient.submitApplication(appContext);
+
+
 
         // Monitor the application
         // 모니터는 임시로 구현한 것
@@ -301,8 +336,7 @@ public class MyClient {
         FileSystem fs = FileSystem.get(conf);
 
 
-        // localResources → AM 컨테이너에서 사용할 파일/아카이브 목록
-        // set local resources for the application master
+        // set local resources for the application master (localResources → AM 컨테이너에서 사용할 파일/아카이브 목록)
         // local files or archives as needed
         // In this scenario, the jar file for the application master is part of the local resources
         Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
@@ -374,7 +408,7 @@ public class MyClient {
 
         // HDFS 에서 저장될 경로 생성
         // 예시 ) "/user/username/HelloYarn/123/AppMaster.jar"
-        String suffix = appName + "/" + appId + "/" + fileDstPath;
+        String suffix = appName + "/" + appId + "/" + fileDstPath; // suffix : n. 접미사
         Path dst = new Path(fs.getHomeDirectory(), suffix);
 
 
@@ -476,6 +510,13 @@ public class MyClient {
             }
 
             // Get application report for the appId we are interested in
+
+            /*
+            Application 실행 요청 5 -  Application 상태 모니터링
+            - 클라이언트는 ClientRMService 의 getApplicationReport로 ResourceManager에게 ApplicationReport 를 요청한다.
+                ApplicationReport는 Yarn 클러스터에서 실행되는 어플리케이션의 통계정보를 담고 있다
+            - yarnClient.getApplicationReport(appId) : 상태 모니터링
+             */
             ApplicationReport report = yarnClient.getApplicationReport(appId); // ApplicationReport : app 현재 상태, 리소스 사용량, AM 상태 등 제공
             YarnApplicationState state = report.getYarnApplicationState(); // YARN 수준 상태 - 예: NEW, RUNNING, FINISHED, KILLED, FAILED
             FinalApplicationStatus dsStatus = report.getFinalApplicationStatus(); // AM 수준 최종 상태 - 예: SUCCEEDED, FAILED, KILLE
