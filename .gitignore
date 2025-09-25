@@ -169,6 +169,7 @@ fabric.properties
 # ====================
 *.csv
 *.mp4
+/ppt
 *.pptx
 *.pdf
 Data/
